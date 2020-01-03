@@ -69,59 +69,19 @@ proc savePng(texPack: TexPack, path: string) =
 proc pack(texPack: var TexPack, outPath: string, paths: seq[string], cols: int) =
   texPack.load(paths)
   texPack.textureMap = texPack.textures.expectedDistribute(cols)
-
-  # var cols = 1
-  # var rows = (texPack.textures.len / cols).ceil.int
-  # var rows = (texPack.textures.len mod cols)  + (texPack.textures.len div cols)
-  # echo rows
-  # echo expectedDistribute(@[1,2,3,4,5], cols)
   var dimension = texPack.getOutputDimension(cols)
   texPack.outImage = initImage[ColorRGBAF](dimension.x, dimension.y)
-  # texPack.outImage = initImage[ColorRGBAF](2_000, 3_000)
   var distTextures = texPack.textures.expectedDistribute(cols)
-  # echo distTextures.mapit(it.path)
 
   for row in distTextures:
     for col in row:
       blit(texPack.outImage, col.img, texPack.drawPos.x, texPack.drawPos.y)
       echo "[+] ", col.path
-      texPack.drawPos.x.inc(col.img.width)
       col.pos = texPack.drawPos
+      texPack.drawPos.x.inc(col.img.width)
     texPack.drawPos.x = 0
     texPack.drawPos.y.inc(row.maxHeight)
-    # col.pos.x = texPack.drawPos.x
-    # col.pos.y = texPack.drawPos.y
-
   savePng[ColorRGBAF](texPack.outImage, outPath)
-    # curWidth.inc image.width
-
-
-  # echo dist
-  # echo texPack.images
-  # echo toSeq(texPack.textures.keys())[0]
-  # echo texPack.images()[0..1].maxHeight()
-  # var maxWidth: int = 0 
-  # var maxHeight: int = 0
-  # var width: int = 0
-  # for path in paths:
-  #   echo "[+] ", path
-  #   var image: Img = loadImage[ColorRGBAF](path)
-  #   images.add image
-  #   width += image.width
-  #   if maxWidth < image.width:
-  #     maxWidth = image.width
-  #   if maxHeight < image.height:
-  #     maxHeight = image.height
-  #   # texPack.images[path.extractFilename()] = image
-  # texPack.outPath = output
-  # texPack.outWidth = width
-  # texPack.outHeight = maxHeight
-  # texPack.outImage = initImage[ColorRGBAF](width, maxHeight)
-  # var curWidth: int = 0
-  # for image in texPack.images:
-  #   blit(texPack.outImage, image, curWidth, 0)
-  #   curWidth.inc image.width
-  # savePng[ColorRGBAF](texPack.outImage, output)
 
 proc serializeBabylon(texPack: TexPack): string =
   ## babylon.js compatible
