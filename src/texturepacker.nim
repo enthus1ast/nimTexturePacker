@@ -8,7 +8,10 @@ import algorithm
 
 type
   Img = Image[ColorRGBAF]
-  Texture = tuple[path: string, img: Img]
+  Texture = ref object
+    path: string
+    img: Img
+    pos: Vec2[int]
   Textures = seq[Texture]
   TexPack = object
     textures: Textures
@@ -58,7 +61,7 @@ proc getOutputDimension(texPack: TexPack, cols: int): Vec2[int] =
 
 proc load(texPack: var TexPack, paths: seq[string]) =
   for path in paths:
-    texPack.textures.add (path, loadImage[ColorRGBAF](path))
+    texPack.textures.add Texture(path: path, img: loadImage[ColorRGBAF](path), pos: vec2(0, 0))
 
 proc savePng(texPack: TexPack, path: string) =
   savePng[ColorRGBAF](texPack.outImage, path)
@@ -81,9 +84,14 @@ proc pack(texPack: var TexPack, outPath: string, paths: seq[string], cols: int) 
   for row in distTextures:
     for col in row:
       blit(texPack.outImage, col.img, texPack.drawPos.x, texPack.drawPos.y)
+      echo "[+] ", col.path
       texPack.drawPos.x.inc(col.img.width)
+      col.pos = texPack.drawPos
     texPack.drawPos.x = 0
     texPack.drawPos.y.inc(row.maxHeight)
+    # col.pos.x = texPack.drawPos.x
+    # col.pos.y = texPack.drawPos.y
+
   savePng[ColorRGBAF](texPack.outImage, outPath)
     # curWidth.inc image.width
 
@@ -115,53 +123,51 @@ proc pack(texPack: var TexPack, outPath: string, paths: seq[string], cols: int) 
   #   curWidth.inc image.width
   # savePng[ColorRGBAF](texPack.outImage, output)
 
-# proc serializeBabylon(texPack: TexPack): string =
-#   ## babylon.js compatible
-#   var json: JsonNode = %* {}
-#   json["frames"] = %* {}
-#   var curWidth: int = 0
-#   for (name, texture) in texPack.textures.pairs():
-#     json["frames"][name] = %* {
-#       "frame": %* {
-#         "x": % curWidth,
-#         "y": % 0,
-#         "w": % texture.width,
-#         "h": % texture.height
-#       }
-#     }
-#     curWidth.inc(texture.width)
-#   json["meta"] = %* {
-#     "image": texPack.outPath.extractFilename(),
-#     "size": {
-#       "w": texPack.outImage.width,
-#       "h": texPack.outImage.height
-#     }
-#   }
-#   return $json
+proc serializeBabylon(texPack: TexPack): string =
+  ## babylon.js compatible
+  var json: JsonNode = %* {}
+  json["frames"] = %* {}
+  for texture in texPack.textures:
+    json["frames"][texture.path.extractFilename()] = %* {
+      "frame": %* {
+        "x": % texture.pos.x,
+        "y": % texture.pos.y,
+        "w": % texture.img.width,
+        "h": % texture.img.height
+      }
+    }
+  json["meta"] = %* {
+    "image": texPack.outPath.extractFilename(),
+    "size": {
+      "w": texPack.outImage.width,
+      "h": texPack.outImage.height
+    }
+  }
+  return $json
 
-# proc main(output: string, paths: seq[string]) =
-#   var texPack = newTexPack()
-#   texPack.pack(output, paths, 3)
-#   # var data: string = texPack.serializeBabylon()
-#   # let pathSplit = splitFile(output)
-#   # var jsonPath: string = pathSplit.dir / pathSplit.name & ".json"
-#   # echo "[>] ", output
-#   # echo "[>] ", jsonPath
-#   # writeFile(jsonPath, data)
+proc main(output: string, cols = 2, paths: seq[string]) =
+  var texPack = newTexPack()
+  texPack.pack(output, paths, cols)
+  var data: string = texPack.serializeBabylon()
+  let pathSplit = splitFile(output)
+  var jsonPath: string = pathSplit.dir / pathSplit.name & ".json"
+  echo "[>] ", output
+  echo "[>] ", jsonPath
+  writeFile(jsonPath, data)
 
 
 when isMainModule:
   import cligen
-  var texPack = newTexPack()
-  texPack.pack(
-    "out.png",
-    @[
-      "/home/david/Downloads/ch4tcode0.png",
-      "/home/david/Downloads/592-shinto-shrine.png",
-      "/home/david/quark/src/public/assets/nebulas/Nebula1.png", 
-      "/home/david/quark/src/public/assets/nebulas/Nebula2.png",
-      "/home/david/quark/src/public/assets/nebulas/Nebula3.png"
-    ],
-    1
-  )
-  # dispatch main
+  # var texPack = newTexPack()
+  # texPack.pack(
+  #   "out.png",
+  #   @[
+  #     "/home/david/Downloads/ch4tcode0.png",
+  #     "/home/david/Downloads/592-shinto-shrine.png",
+  #     "/home/david/quark/src/public/assets/nebulas/Nebula1.png", 
+  #     "/home/david/quark/src/public/assets/nebulas/Nebula2.png",
+  #     "/home/david/quark/src/public/assets/nebulas/Nebula3.png"
+  #   ],
+  #   1
+  # )
+  dispatch main
