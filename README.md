@@ -2,10 +2,10 @@
 simple texture packer
 
 for now this generates json files compatible with 
-https://babylonjs.com/
+https://doc.babylonjs.com/divingDeeper/sprites/sprite_map
 
 ```
-nim c -r -d:release --opt:speed ./texturepacker
+nimble build -d:release
 texturepacker --cols=4 -o=/tmp/out.png /home/user/assets/*.png
 
 $ ls /tmp/out*
