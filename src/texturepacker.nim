@@ -1,26 +1,23 @@
-import imageman
+import pixie
+import vmath
 import tables
 import json
 import os
-import sequtils
-import glm/vec
-import algorithm
 
 type
-  Img = Image[ColorRGBAF]
   Texture = ref object
     path: string
-    img: Img
-    pos: Vec2[int]
+    img: Image
+    pos: IVec2
   Textures = seq[Texture]
   TexPack = object
     textures: Textures
     textureMap: seq[seq[Texture]]
-    outImage: Img
+    outImage: Image
     outPath: string
-    outWidth: int
-    outHeight: int
-    drawPos: Vec2[int]
+    outWidth: int32
+    outHeight: int32
+    drawPos: IVec2
 
 proc newTexPack(): TexPack =
   result = TexPack()
@@ -53,35 +50,32 @@ proc width(textures: Textures): int =
 proc maxWidth(texture: Texture): int =
     texture.img.width
 
-proc getOutputDimension(texPack: TexPack, cols: int): Vec2[int] =
+proc getOutputDimension(texPack: TexPack, cols: int): IVec2 =
   var dist = texPack.textures.expectedDistribute(cols)
   for row in dist:
-    result.x = max(row.width, result.x)
-    result.y += row.maxHeight()
+    result.x = max(row.width, result.x).int32
+    result.y += row.maxHeight().int32
 
 proc load(texPack: var TexPack, paths: seq[string]) =
   for path in paths:
-    texPack.textures.add Texture(path: path, img: loadImage[ColorRGBAF](path), pos: vec2(0, 0))
-
-proc savePng(texPack: TexPack, path: string) =
-  savePng[ColorRGBAF](texPack.outImage, path)
+    texPack.textures.add Texture(path: path, img: readImage(path), pos: ivec2(0, 0))
 
 proc pack(texPack: var TexPack, outPath: string, paths: seq[string], cols: int) =
   texPack.load(paths)
   texPack.textureMap = texPack.textures.expectedDistribute(cols)
   var dimension = texPack.getOutputDimension(cols)
-  texPack.outImage = initImage[ColorRGBAF](dimension.x, dimension.y)
+  texPack.outImage = newImage(dimension.x, dimension.y)
   var distTextures = texPack.textures.expectedDistribute(cols)
 
   for row in distTextures:
     for col in row:
-      blit(texPack.outImage, col.img, texPack.drawPos.x, texPack.drawPos.y)
+      draw(texPack.outImage, col.img, translate(vec2(texPack.drawPos.x.float, texPack.drawPos.y.float)))
       echo "[+] ", col.path
       col.pos = texPack.drawPos
       texPack.drawPos.x.inc(col.img.width)
     texPack.drawPos.x = 0
     texPack.drawPos.y.inc(row.maxHeight)
-  savePng[ColorRGBAF](texPack.outImage, outPath)
+  writeFile(texPack.outImage, outPath)
 
 proc serializeBabylon(texPack: TexPack): string =
   ## babylon.js compatible
